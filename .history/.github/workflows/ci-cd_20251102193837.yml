@@ -1,0 +1,63 @@
+
+    name: CI/CD Pipeline Simples
+
+    # 1. Gatilho: Rodar toda vez que você der 'push' na branch 'main'
+    on:
+    push:
+        branches: [ "main" ] # Mude para "master" se for o nome da sua branch principal
+
+    jobs:
+    # --- Job 1: Buildar a imagem Docker e enviar para o Docker Hub ---
+    build-e-push:
+        runs-on: ubuntu-latest
+        steps:
+        # Pega o seu código mais recente do repositório
+        - name: Checkout do código
+            uses: actions/checkout@v3
+
+        # Faz o login no Docker Hub usando os Secrets
+        - name: Login no Docker Hub
+            uses: docker/login-action@v2
+            with:
+            username: ${{ secrets.REGISTRY_USER }}
+            password: ${{ secrets.REGISTRY_PASSWORD }}
+
+        # Builda a imagem Docker e envia para o Docker Hub
+        # ATENÇÃO: Altere "seu-usuario/nome-da-imagem" abaixo
+        - name: Build e Push da Imagem Docker
+            uses: docker/build-push-action@v4
+            with:
+            context: .
+            push: true
+            tags: bielzinho230/Ultima-tentativa:latest # <-- MUDE ISSO
+
+    # --- Job 2: Conectar na AWS e atualizar a aplicação ---
+    deploy:
+        # Só roda DEPOIS que o job 'build-e-push' terminar com sucesso
+        needs: build-e-push
+        runs-on: ubuntu-latest
+
+        steps:
+        - name: Deploy na Instância EC2 via SSH
+            uses: appleboy/ssh-action@v1.0.3 # Ação popular para fazer SSH
+            with:
+            host: ${{ secrets.EC2_HOST }}
+            username: ${{ secrets.EC2_USER }}
+            key: ${{ secrets.EC2_SSH_KEY }}
+            port: 22 # Porta padrão do SSH
+            script: |
+                # 1. Faz o login no Docker Hub DENTRO da instância AWS
+                docker login -u ${{ secrets.REGISTRY_USER }} -p ${{ secrets.REGISTRY_PASSWORD }}
+
+                # 2. Baixa a imagem mais nova que acabamos de enviar
+                # ATENÇÃO: Use o MESMO nome da imagem do job anterior
+                docker pull bielzinho230/nome-do-seu-projeto:latest # <-- MUDE ISSO
+
+                # 3. Para e remove o container antigo (SE ELE EXISTIR)
+                # ATENÇÃO: Mude "nome-do-seu-container" abaixo
+                docker stop nome-do-seu-container || true
+                docker rm nome-do-seu-container || true
+
+                # 4. Roda o novo container com a imagem atualizada
+                # ATENÇÃO: Ajuste o comando 'run' para o seu projeto
+                docker run -d -p 80:80 --name nome-do-seu-container bielzinho230/nome-do-seu-projeto:latest # <-- MUDE ISSO

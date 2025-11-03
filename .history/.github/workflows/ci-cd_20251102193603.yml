@@ -1,0 +1,50 @@
+name: CI/CD Pipeline Simples
+
+on:
+    push:
+        branches: [ "main" ] # Mude para "master" se for o nome da sua branch principal
+
+jobs:
+    build-e-push:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout do código
+                uses: actions/checkout@v3
+
+            - name: Login no Docker Hub
+                uses: docker/login-action@v2
+                with:
+                    username: ${{ secrets.REGISTRY_USER }}
+                    password: ${{ secrets.REGISTRY_PASSWORD }}
+
+            - name: Build e Push da Imagem Docker
+                uses: docker/build-push-action@v4
+                with:
+                    context: .
+                    push: true
+                    tags: "bielzinho230/nome-do-seu-projeto:latest" # <-- MUDE ISSO
+
+    deploy:
+        needs: build-e-push
+        runs-on: ubuntu-latest
+        steps:
+            - name: Deploy na Instância EC2 via SSH
+                uses: appleboy/ssh-action@v1.0.3
+                with:
+                    host: ${{ secrets.EC2_HOST }}
+                    username: ${{ secrets.EC2_USER }}
+                    key: ${{ secrets.EC2_SSH_KEY }}
+                    port: 22
+                    script: |
+                        # 1. Faz o login no Docker Hub DENTRO da instância AWS
+                        docker login -u ${{ secrets.REGISTRY_USER }} -p ${{ secrets.REGISTRY_PASSWORD }}
+
+                        # 2. Baixa a imagem mais nova que acabamos de enviar
+                        docker pull bielzinho230/nome-do-seu-projeto:latest # <-- MUDE ISSO
+
+                        # 3. Para e remove o container antigo (SE ELE EXISTIR)
+                        docker stop nome-do-seu-container || true
+                        docker rm nome-do-seu-container || true
+
+                        # 4. Roda o novo container com a imagem atualizada
+                        docker run -d -p 80:80 --name nome-do-seu-container bielzinho230/nome-do-seu-projeto:latest # <-- MUDE ISSO

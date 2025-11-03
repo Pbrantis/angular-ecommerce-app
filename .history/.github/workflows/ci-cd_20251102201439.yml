@@ -1,0 +1,51 @@
+name: CI/CD Pipeline Final
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-e-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Login no Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build e Push da Imagem Docker
+        uses: docker/build-push-action@v4
+        with:
+          context: ./client # <--- A CORREÇÃO ESTÁ AQUI
+          push: true
+          tags: bielzinho230/e-commerce-v6:latest
+
+  deploy:
+    needs: build-e-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy na Instância EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            # 1. Login no Docker Hub
+            docker login -u ${{ secrets.REGISTRY_USER }} -p ${{ secrets.REGISTRY_PASSWORD }}
+            
+            # 2. Baixa a imagem mais nova
+            docker pull bielzinho230/e-commerce-v6:latest
+
+            # 3. Para e remove o container antigo (se existir)
+            docker stop ecommerce-app || true
+            docker rm ecommerce-app || true
+            
+            # 4. Roda o novo container
+            docker run -d -p 30080:80 --name ecommerce-app bielzinho230/e-commerce-v6:latest
