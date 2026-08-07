@@ -109,10 +109,6 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Upload k8s manifests
-        run: |
-          scp -i ~/.ssh/id_rsa -r k8s "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/"
-
       - name: Apply manifests and restart deployments
         run: |
           ssh -i ~/.ssh/id_rsa "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
