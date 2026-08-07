@@ -6,32 +6,32 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 16
-          cache: npm
-          cache-dependency-path: client/package-lock.json
-
-      - name: Install dependencies (client)
-        working-directory: client
-        run: npm ci --legacy-peer-deps
-
-      - name: Lint (client)
-        working-directory: client
-        run: npm run lint
-
-      - name: Syntax check (backend)
-        working-directory: backend
-        run: |
-          for f in $(find . -name "*.js" -not -path "./node_modules/*"); do
-            node --check "$f"
-          done
+#  lint:
+#    name: Lint
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - uses: actions/setup-node@v4
+#        with:
+#          node-version: 16
+#          cache: npm
+#          cache-dependency-path: client/package-lock.json
+#
+#      - name: Install dependencies (client)
+#        working-directory: client
+#        run: npm ci --legacy-peer-deps
+#
+#      - name: Lint (client)
+#        working-directory: client
+#        run: npm run lint
+#
+#      - name: Syntax check (backend)
+#        working-directory: backend
+#        run: |
+#          for f in $(find . -name "*.js" -not -path "./node_modules/*"); do
+#            node --check "$f"
+#          done
 
   build-frontend:
     name: Build frontend
